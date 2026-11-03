@@ -1,0 +1,13 @@
+<service>
+  <id>OKRNginx</id>
+  <name>OKR Nginx</name>
+  <executable>D:\OKR\nginx\nginx.exe</executable>
+  <arguments>-p D:/OKR/nginx/ -c conf/nginx.conf</arguments>
+  <workingdirectory>D:\OKR\nginx</workingdirectory>
+  <stopexecutable>D:\OKR\nginx\nginx.exe</stopexecutable>
+  <stoparguments>-p D:/OKR/nginx/ -c conf/nginx.conf -s quit</stoparguments>
+  <logpath>D:\OKR\logs</logpath>
+  <log mode="roll" />
+  <onfailure action="restart" delay="10 sec" />
+  <stoptimeout>60 sec</stoptimeout>
+</service>

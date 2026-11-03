@@ -1,0 +1,12 @@
+<service>
+  <id>OKRWorker</id>
+  <name>OKR Worker</name>
+  <executable>D:\OKR\releases\RELEASE_ID\.venv\Scripts\python.exe</executable>
+  <arguments>-m app.worker</arguments>
+  <workingdirectory>D:\OKR\releases\RELEASE_ID\backend</workingdirectory>
+  <env name="OKR_ENV" value="production" />
+  <logpath>D:\OKR\logs</logpath>
+  <log mode="roll" />
+  <onfailure action="restart" delay="10 sec" />
+  <stoptimeout>150 sec</stoptimeout>
+</service>

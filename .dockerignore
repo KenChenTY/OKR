@@ -1,0 +1,16 @@
+.git
+.venv
+.cache
+.agents
+.codex
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+frontend/dist
+**/.env
+**/.env.*
+var
+test-results
+*.log
+*.docx

@@ -1,0 +1,99 @@
+name: okr
+
+x-app-environment: &app-environment
+  OKR_ENV: development
+  OKR_AUTH_MODE: password
+  OKR_ENABLE_DEV_LOGIN: "false"
+  OKR_PUBLIC_URL: ${OKR_PUBLIC_URL:?Set OKR_PUBLIC_URL in .env}
+  OKR_DATABASE_URL: "mssql+pyodbc://okr_app:${OKR_APP_PASSWORD:?Generate OKR_APP_PASSWORD in .env}@sqlserver:1433/OKR?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes"
+  OKR_STORAGE_ROOT: /data/okr
+  OKR_BUSINESS_TIMEZONE: Asia/Shanghai
+
+x-backend: &backend
+  image: okr-backend:local
+  build:
+    context: ../..
+    dockerfile: deploy/docker/backend.Dockerfile
+  environment: *app-environment
+  volumes:
+    - okr_files:/data/okr
+  depends_on:
+    sqlserver:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Generate MSSQL_SA_PASSWORD in .env}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "SQLCMDPASSWORD=\"$$MSSQL_SA_PASSWORD\" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -b -l 5 -Q 'SELECT 1' -o /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    <<: *backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=8).read()"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.worker"]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    image: okr-web:local
+    build:
+      context: ../..
+      dockerfile: deploy/docker/frontend.Dockerfile
+    ports:
+      - "${OKR_HTTP_BIND:-0.0.0.0}:${OKR_HTTP_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Explicit one-off administration; sa is never passed to API or Worker.
+  admin:
+    <<: *backend
+    profiles: ["tools"]
+    environment:
+      <<: *app-environment
+      OKR_DATABASE_URL: "mssql+pyodbc://sa:${MSSQL_SA_PASSWORD:?Generate MSSQL_SA_PASSWORD in .env}@sqlserver:1433/OKR?driver=ODBC+Driver+18+for+SQL+Server&Encrypt=yes&TrustServerCertificate=yes"
+      OKR_APP_PASSWORD: ${OKR_APP_PASSWORD:?Generate OKR_APP_PASSWORD in .env}
+    command: ["python", "bootstrap.py"]
+
+volumes:
+  sqlserver_data:
+  okr_files:

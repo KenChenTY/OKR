@@ -1,0 +1,13 @@
+<service>
+  <id>OKRApi</id>
+  <name>OKR API</name>
+  <description>OKR FastAPI ASGI service</description>
+  <executable>D:\OKR\releases\RELEASE_ID\.venv\Scripts\python.exe</executable>
+  <arguments>-m uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-access-log</arguments>
+  <workingdirectory>D:\OKR\releases\RELEASE_ID\backend</workingdirectory>
+  <env name="OKR_ENV" value="production" />
+  <logpath>D:\OKR\logs</logpath>
+  <log mode="roll" />
+  <onfailure action="restart" delay="10 sec" />
+  <stoptimeout>40 sec</stoptimeout>
+</service>
